@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counting & Radix Sort Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-dim: #9e9e9e;
+            --accent-color: #00bcd4;
+            --accent-hover: #0097a7;
+            --border-color: #333333;
+
+            /* State Colors */
+            --color-idle: #3b5998;
+            --color-compare: #f44336;
+            --color-active: #ffeb3b;
+            --color-sorted: #4caf50;
+            --color-count: #9c27b0;
+            --color-radix: #ff9800;
+
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --font-mono: 'Courier New', Courier, monospace;
+
+            --transition-speed: 250ms;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        /* Layout Container */
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* Left Column: Controls (fixed width) */
+        .controls-panel {
+            width: 420px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* Right Column: Visualization & Details */
+        .main-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+            padding-bottom: 50px;
+        }
+
+        /* Responsive: Single column under 980px */
+        @media (max-width: 980px) {
+            .app-container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .controls-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                max-height: 50vh;
+            }
+
+            .main-panel {
+                overflow-y: visible;
+            }
+        }
+
+        /* Panel Sections */
+        .panel-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            background: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            font-weight: 500;
+            flex: 1;
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        button:hover {
+            background-color: #444;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button.primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-hover);
+        }
+
+        button.primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Speed & Progress */
+        .progress-bar {
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width var(--transition-speed) ease-out;
+        }
+
+        .status-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        /* Legend */
+        .legend-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        /* Main Visualization Area */
+        .viz-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .viz-canvas-container {
+            padding: 20px;
+            min-height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #1a1a1a;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        svg#viz-canvas {
+            width: 100%;
+            height: 360px;
+            overflow: visible;
+        }
+
+        /* SVG Elements */
+        .bar {
+            transition: height var(--transition-speed), transform var(--transition-speed), fill var(--transition-speed);
+        }
+
+        .bar-label {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            fill: white;
+            text-anchor: middle;
+            transition: transform var(--transition-speed), opacity var(--transition-speed);
+        }
+
+        .index-label {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            fill: var(--text-dim);
+            text-anchor: middle;
+        }
+
+        /* Bottom Sections / Layout Grid */
+        .bottom-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .bottom-sections {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Pseudocode */
+        .pseudocode {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            background: #0d0d0d;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-y: auto;
+            max-height: 250px;
+        }
+
+        .code-line {
+            display: flex;
+            padding: 2px 5px;
+            border-radius: 3px;
+            cursor: help;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .code-line:hover {
+            background: #222;
+        }
+
+        .line-num {
+            color: var(--text-dim);
+            width: 25px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .code-line.active {
+            background: rgba(0, 188, 212, 0.2);
+            border-left: 3px solid var(--accent-color);
+            padding-left: 2px;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            visibility: hidden;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+            font-family: var(--font-main);
+            font-size: 0.8rem;
+            pointer-events: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .code-line:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* History Table */
+        .history-container {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th,
+        td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background: #2a2a2a;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        tr {
+            transition: background 0.15s;
+            cursor: pointer;
+        }
+
+        tr:hover {
+            background: #2a2a2a;
+        }
+
+        tr.active-row {
+            background: rgba(0, 188, 212, 0.1);
+            font-weight: 500;
+        }
+
+        /* Step Explanation */
+        .step-explanation {
+            background: rgba(0, 188, 212, 0.1);
+            border-left: 4px solid var(--accent-color);
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Educational Content */
+        .edu-section {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin: 0 20px 20px 20px;
+        }
+
+        .collapsible {
+            background-color: #2a2a2a;
+            color: white;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .active-collapse,
+        .collapsible:hover {
+            background-color: #333;
+        }
+
+        .collapsible:after {
+            content: '\002B';
+            /* Plus sign */
+            font-weight: bold;
+            font-size: 1.5rem;
+            transition: transform 0.3s;
+        }
+
+        .active-collapse:after {
+            transform: rotate(45deg);
+        }
+
+        .content {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background-color: var(--panel-bg);
+            border-radius: 0 0 6px 6px;
+        }
+
+        .content-inner {
+            padding: 20px 0;
+        }
+
+        .key-concept {
+            background: rgba(255, 152, 0, 0.1);
+            border-left: 4px solid var(--color-radix);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .stat-counters {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #222;
+            padding: 10px 15px;
+            border-radius: 6px;
+            min-width: 90px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            font-family: var(--font-mono);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+            <div class="panel-section">
+                <h1>Algorithm Visualizer</h1>
+                <p
+                    style="color: var(--text-dim); font-size: 0.95rem; text-align: center; margin-top: 5px; margin-bottom: 2px;">
+                    Counting Sort & Radix Sort</p>
+                <p style="color: #666; font-size: 0.8rem; text-align: center; font-style: italic;">Made by Mohamad
+                    Alkassem</p>
+            </div>
+
+            <div class="panel-section">
+                <h3>Configuration</h3>
+                <div class="form-group">
+                    <label for="algorithm-select">Algorithm</label>
+                    <select id="algorithm-select">
+                        <option value="counting">Counting Sort</option>
+                        <option value="radix">Radix Sort (Base 10)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="custom-input">Input Data (comma separated)</label>
+                    <input type="text" id="custom-input" value="12, 4, 3, 2, 7, 1, 9, 3, 4, 15"
+                        placeholder="e.g. 5, 2, 9, 1...">
+                </div>
+
+                <div class="form-group"
+                    style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 15px;">
+                    <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
+                        <input type="checkbox" id="compare-qs-checkbox" style="width:16px; height:16px;"
+                            onchange="toggleQSLayout()">
+                        <strong>Compare with QuickSort (Side-by-Side)</strong>
+                    </label>
+                </div>
+
+                <label>Preset Examples</label>
+                <div class="button-group">
+                    <button onclick="loadPreset('random')">Random</button>
+                    <button onclick="loadPreset('sorted')">Nearly Sorted</button>
+                    <button onclick="loadPreset('reversed')">Reversed</button>
+                    <button onclick="loadPreset('worst')">Worst Case</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>Playback Controls</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="status-text" style="margin-bottom: 15px;">
+                    <span id="status-display">Status: Ready</span>
+                    <span id="step-counter">Step: 0 / 0</span>
+                </div>
+
+                <div class="button-group" style="display:flex; flex-wrap:wrap; gap:5px;">
+                    <button class="primary" onclick="buildSteps()">Build Steps</button>
+                    <button id="btn-step-next" onclick="stepNext()">Step</button>
+                    <button id="btn-play" onclick="playAnimation()">Play</button>
+                    <button id="btn-pause" onclick="pauseAnimation()">Pause</button>
+                    <button id="btn-reset" onclick="reset()">Reset</button>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label for="speed-slider">Animation Speed (<span id="speed-display">1.0</span>x)</label>
+                    <input type="range" id="speed-slider" min="0.25" max="4" step="0.25" value="1">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>Legend</h3>
+                <div class="legend-container">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-idle)"></div> Default
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-compare)"></div> Comparing / Evaluating
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-active)"></div> Active / Selected
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-sorted)"></div> Placed / Sorted
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-count)"></div> Count Array
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--color-radix)"></div> Target Radix
+                    </div>
+                </div>
+            </div>
+        </div> <!-- /Controls Panel -->
+
+        <!-- Main Panel -->
+        <div class="main-panel">
+
+            <div class="viz-header">
+                <h2>Visualization Area</h2>
+                <div class="stat-counters" style="align-items:center;">
+                    <div class="stat-item">
+                        <span class="stat-value" id="stat-reads">0</span>
+                        <span class="stat-label">Array Reads</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="stat-writes">0</span>
+                        <span class="stat-label">Array Writes</span>
+                    </div>
+
+                    <!-- QuickSort Stats -->
+                    <div id="qs-stats-container"
+                        style="display:none; border-left: 1px solid #555; padding-left: 20px; margin-left: 10px; align-items:center; gap:15px;">
+                        <div style="color: #f44336; font-size: 0.8rem; font-weight:bold; width: 60px;">QS Stats:</div>
+                        <div class="stat-item" style="background: rgba(244,67,54,0.1);">
+                            <span class="stat-value" id="qs-stat-comps" style="color:#f44336;">0</span>
+                            <span class="stat-label">Comps</span>
+                        </div>
+                        <div class="stat-item" style="background: rgba(244,67,54,0.1);">
+                            <span class="stat-value" id="qs-stat-swaps" style="color:#f44336;">0</span>
+                            <span class="stat-label">Swaps</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viz-canvas-container" style="display:flex; gap:20px;">
+                <div class="viz-wrapper" style="flex:1; width:100%;">
+                    <svg id="viz-canvas" style="width:100%; height:360px; overflow:visible;"></svg>
+                </div>
+                <div class="viz-wrapper qs-wrapper" id="qs-canvas-wrapper"
+                    style="display:none; flex:1; width:100%; border-left: 1px solid #333; padding-left: 20px;">
+                    <h4 style="color: #f44336; text-align: center; margin-bottom: 20px;">QuickSort (O(n log n))</h4>
+                    <svg id="viz-canvas-qs" style="width:100%; height:320px; overflow:visible;"></svg>
+                </div>
+            </div>
+
+            <div style="padding: 20px 20px 0 20px;">
+                <div class="step-explanation" id="step-explanation">
+                    Initialize the visualization to begin.
+                </div>
+            </div>
+
+            <div class="bottom-sections">
+                <div class="card">
+                    <h3>Pseudocode</h3>
+                    <div class="pseudocode" id="pseudocode-panel">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Execution History</h3>
+                    <div class="history-container">
+                        <table id="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Step</th>
+                                    <th>Action</th>
+                                    <th>Array State</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-body">
+                                <!-- Dynamics rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- General Educational Content -->
+            <h2 style="padding: 20px 20px 0 20px;">Educational Content & Overviews</h2>
+
+            <div class="edu-section">
+                <button class="collapsible">Algorithm Overview: Counting & Radix Sort</button>
+                <div class="content">
+                    <div class="content-inner">
+                        <p><strong>What it does:</strong> Counting Sort and Radix Sort are non-comparison-based sorting
+                            algorithms that sort elements by distributing them based on their integer values or specific
+                            digit representations, rather than comparing elements directly against each other.</p>
+                        <p><strong>How it works:</strong><br>
+                            - <em>Counting Sort:</em> Counts the frequency of each distinct element in the input array.
+                            It uses an auxiliary "count" array where the index represents the element value and the
+                            stored number is the frequency. It then computes prefix sums to determine the absolute
+                            sorted position of each element.<br>
+                            - <em>Radix Sort:</em> Processes numbers digit by digit, from least significant to most
+                            significant (LSD). For each digit pass, it uses a stable sorting algorithm (like Counting
+                            Sort) to group the numbers into standard base-10 buckets (0-9). By the end of the most
+                            significant digit pass, the array is fully sorted.</p>
+                        <p><strong>When to use it:</strong><br>
+                            - Use <em>Counting Sort</em> when the range of potential values (k) in the input is
+                            relatively small compared to the number of elements (n). It is extremely fast (linear time
+                            O(n+k)) when k = O(n).<br>
+                            - Use <em>Radix Sort</em> for sorting lists of integers, strings, or records with multiple
+                            keys when $n$ is large and the maximum number of digits ($d$) is relatively small. It avoids
+                            the massive memory overhead Counting Sort would suffer on large integer ranges.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edu-section">
+                <button class="collapsible">Fully Worked Example: Counting Sort on [4, 2, 2, 8, 3, 3, 1]</button>
+                <div class="content">
+                    <div class="content-inner">
+                        <p>Let's manually trace Counting Sort on the array: <code>Input = [4, 2, 2, 8, 3, 3, 1]</code>
+                        </p>
+                        <ol style="line-height: 1.6; margin-left: 20px;">
+                            <li><strong>Find Max:</strong> The maximum value is k = 8. We need a Count array of size
+                                9 (indices 0 to 8).</li>
+                            <li><strong>Count Frequencies:</strong> We count how many times each number appears.<br>
+                                <code>Count = [0, 1, 2, 2, 1, 0, 0, 0, 1]</code> (e.g. index 2 is 2 because the number
+                                '2' appears twice).
+                            </li>
+                            <li><strong>Compute Prefix Sums:</strong> We modify the Count array such that each element
+                                at each index stores the sum of previous counts. This tells us the final ending
+                                positional index for each number.<br>
+                                <code>Prefix Count = [0, 1, 3, 5, 6, 6, 6, 6, 7]</code>
+                            </li>
+                            <li><strong>Place in Output (Iterating backward for stability):</strong><br>
+                                - Look at the last element in Input: <code>1</code>. Check <code>Prefix Count[1]</code>,
+                                which is 1. We place <code>1</code> at Output index <code>1-1 = 0</code>. We decrement
+                                <code>Prefix Count[1]</code> to 0.<br>
+                                - Look at next element from the right: <code>3</code>. Check
+                                <code>Prefix Count[3]</code>, which is 5. We place <code>3</code> at Output index
+                                <code>5-1 = 4</code>. We decrement <code>Prefix Count[3]</code> to 4.<br>
+                                - Look at next element: <code>3</code>. Check <code>Prefix Count[3]</code>, which is now
+                                4. We place <code>3</code> at Output index <code>4-1 = 3</code>.<br>
+                                - This process continues until all elements are placed exactly into their mapped
+                                topological indices!<br>
+                                <code>Final Output = [1, 2, 2, 3, 3, 4, 8]</code>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edu-section">
+                <button class="collapsible">Key Concepts & Common Mistakes</button>
+                <div class="content">
+                    <div class="content-inner" style="display:flex; flex-wrap:wrap; gap:20px;">
+                        <div class="key-concept" style="flex:1; min-width:300px; border-left: 4px solid #4CAF50;">
+                            <strong>Important Ideas</strong>
+                            <ul style="margin-left:20px; margin-top:10px;">
+                                <li><strong>Integer Exploitation:</strong> These algorithms don't ask "Is A > B?".
+                                    Instead they ask "What IS A? Ah, A is 5, so put it in bucket 5." They use the values
+                                    themselves as direct memory addresses/indices.</li>
+                                <li><strong>Stability is Mandatory:</strong> The Counting Sort used *inside* Radix Sort
+                                    MUST be stable. A stable sort preserves the relative order of identical elements. If
+                                    it wasn't stable, sorting the "Tens" digit would scramble the work you just finished
+                                    on the "Units" digit!</li>
+                            </ul>
+                        </div>
+                        <div class="key-concept"
+                            style="flex:1; min-width:300px; border-left: 4px solid #F44336; background: rgba(244, 67, 54, 0.05);">
+                            <strong>Common Mistakes</strong>
+                            <ul style="margin-left:20px; margin-top:10px;">
+                                <li><strong style="color:#F44336">Mistake:</strong> Using Counting Sort on
+                                    floating-point numbers or negative numbers out-of-the-box. <br><em>Correction:</em>
+                                    Standard Counting sort maps values directly to list indices, which must be
+                                    non-negative integers. Negative numbers require an offset shift.</li>
+                                <li><strong style="color:#F44336">Mistake:</strong> Using Counting Sort when the scale
+                                    k is 10^9. <br><em>Correction:</em> Trying to sort the array
+                                    <code>[1, 1000000000]</code> would painfully generate an array of one billion empty
+                                    zeroes just to sort two elements, crashing the browser's memory limits!
+                                </li>
+                                <li><strong style="color:#F44336">Mistake:</strong> Assuming Radix sort always beats
+                                    O(n log n) QuickSort in the real world. <br><em>Correction:</em> Radix sort has a
+                                    high constant factor overhead for memory allocation and bucket copying. For
+                                    general-purpose arrays, heavily optimized QuickSorts often win empirically due to
+                                    hardware cache locality!</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deep Dive Content (CLOs) -->
+            <h2 style="padding: 20px 20px 0 20px;">Algorithm Deep Dive</h2>
+
+            <div class="edu-section">
+                <button class="collapsible">Asymptotic Analysis & Lower Bounds</button>
+                <div class="content">
+                    <div class="content-inner" style="display:flex; flex-direction:column; gap:20px;">
+                        <p>Counting and Radix sort exploit integer structure to break the &#937;(n log n)
+                            comparison-sort lower bound.</p>
+
+                        <div style="display:flex; flex-wrap:wrap; margin-top:10px; gap:20px;">
+                            <div class="key-concept" style="flex:1; min-width:300px; margin:0;">
+                                <strong>Complexity & Scale</strong>
+                                <table
+                                    style="width:100%; border-collapse:collapse; margin-top:10px; font-size: 0.85rem; background:rgba(255,255,255,0.05);">
+                                    <thead>
+                                        <tr style="border-bottom:1px solid #555;">
+                                            <th style="padding:6px;">Algorithm</th>
+                                            <th style="padding:6px;">Best Case</th>
+                                            <th style="padding:6px;">Worst Case</th>
+                                            <th style="padding:6px;">Avg Case</th>
+                                            <th style="padding:6px;">Space</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody style="text-align:center;">
+                                        <tr>
+                                            <td style="padding:6px;text-align:left;">Counting Sort</td>
+                                            <td>O(n+k)</td>
+                                            <td>O(n+k)<br><span style="color:#FF9800; font-size:10px;">(Huge k = huge
+                                                    ops, use preset "Worst Case")</span></td>
+                                            <td>O(n+k)</td>
+                                            <td>O(n+k)</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:6px;text-align:left;">Radix Sort</td>
+                                            <td>O(d(n+k))</td>
+                                            <td>O(d(n+k))</td>
+                                            <td>O(d(n+k))</td>
+                                            <td>O(n+k)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <p style="font-size:0.8rem; margin-top:15px;">
+                                    <strong>Growth Chart (Theoretical & Empirical):</strong><br>
+                                    <span style="color:#2196F3;">&#9632; O(n log n)</span> Comparison Sort<br>
+                                    <span style="color:#FF9800;">&#9632; O(n + k)</span> Counting Sort
+                                    <span style="color:#E91E63; margin-left:10px;">&#9632; O(d(n + k))</span> Radix
+                                    Sort<br>
+                                    <svg viewBox="0 0 10 10" width="10" height="10" style="margin-right:5px;">
+                                        <circle cx="5" cy="5" r="5" fill="#FFF" />
+                                    </svg> Actual Operations recorded for current Array Size (n) <br>
+                                    <svg viewBox="0 0 10 10" width="10" height="10"
+                                        style="margin-right:5px; margin-top:4px;">
+                                        <circle cx="5" cy="5" r="5" fill="#2196F3" />
+                                    </svg> Comparative QuickSort Operations (Enable Side-by-Side Checkbox!)
+                                </p>
+                                <svg id="complexity-chart" width="100%" height="200"
+                                    style="background:#111; border-radius:4px; margin-top:10px;"></svg>
+                                <div style="margin-top:10px; display:flex; gap:10px;">
+                                    <div style="flex:1;">
+                                        <label style="font-size:0.8rem; color:var(--text-dim);">Adjust <i>k</i>
+                                            (Distribution Range):</label>
+                                        <input type="range" id="k-slider" min="1" max="50" value="5"
+                                            style="width:100%; margin-top:5px;"
+                                            oninput="drawComplexityChart(parseInt(this.value), array.length, currentOps)">
+                                    </div>
+                                    <div style="flex:1;">
+                                        <label style="font-size:0.8rem; color:var(--text-dim);">Adjust <i>n</i> (Input
+                                            Size):</label>
+                                        <input type="range" id="n-slider" min="5" max="50" value="12"
+                                            style="width:100%; margin-top:5px;"
+                                            onchange="customInput.value = Array.from({length: parseInt(this.value)}, () => Math.floor(Math.random() * parseInt(document.getElementById('k-slider').value))).join(', '); buildSteps();">
+                                    </div>
+                                </div>
+                                <div
+                                    style="margin-top:15px; background: rgba(255,152,0,0.1); border-left: 4px solid #FF9800; padding:10px;">
+                                    <strong>Worst Case Execution (Preset Available):</strong> When the maximum value k
+                                    is massively larger than the number of elements n (e.g., sorting
+                                    <code>[1, 999999]</code>).<br>
+                                    <em>Why is this bad?</em> The algorithm must initialize a <code>Count</code> array
+                                    of size k and iterate over it completely multiple times to build prefix sums and
+                                    write to the output. The time complexity technically remains O(n+k), but the
+                                    operation count absolutely explodes, performing hundreds of thousands of useless
+                                    iteration loops over zeroes! Click the <strong>"Worst Case"</strong> Preset button
+                                    in the left panel under Counting Sort to see this degrade in real-time.
+                                </div>
+                            </div>
+
+                            <div class="key-concept" style="flex:1; min-width:300px; margin:0;">
+                                <strong>&#937;(n log n) Lower Bound (Decision Tree)</strong>
+                                <p style="font-size:0.85rem; margin-top:10px; line-height:1.4;">Comparison sorts must
+                                    evaluate leaves in a binary decision tree. For n items, there are n!
+                                    permutations (leaves). The tree height must logically be at least log(n!), which
+                                    simplifies asymptotically to Omega(n log n).</p>
+                                <svg id="decision-tree" width="100%" height="180"
+                                    style="background:#111; border-radius:4px; margin-top:10px;">
+                                    <g stroke="#555" stroke-width="2">
+                                        <line x1="50%" y1="20" x2="25%" y2="70" />
+                                        <line x1="50%" y1="20" x2="75%" y2="70" />
+
+                                        <line x1="25%" y1="70" x2="10%" y2="120" />
+                                        <line x1="25%" y1="70" x2="40%" y2="120" />
+
+                                        <line x1="75%" y1="70" x2="60%" y2="120" />
+                                        <line x1="75%" y1="70" x2="90%" y2="120" />
+
+                                        <!-- Root -->
+                                        <circle cx="50%" cy="20" r="14" fill="#333" stroke="#fff" stroke-width="1" />
+                                        <text x="50%" y="24" fill="#ffffff" font-size="13" font-weight="bold"
+                                            text-anchor="middle">A&lt;B?</text>
+
+                                        <!-- Level 1 -->
+                                        <circle cx="25%" cy="70" r="14" fill="#333" stroke="#fff" stroke-width="1" />
+                                        <text x="25%" y="74" fill="#ffffff" font-size="13" font-weight="bold"
+                                            text-anchor="middle">B&lt;C?</text>
+
+                                        <circle cx="75%" cy="70" r="14" fill="#333" stroke="#fff" stroke-width="1" />
+                                        <text x="75%" y="74" fill="#ffffff" font-size="13" font-weight="bold"
+                                            text-anchor="middle">A&lt;C?</text>
+
+                                        <!-- Level 2 (Leaves) -->
+                                        <circle cx="10%" cy="120" r="12" fill="#4CAF50" />
+                                        <circle cx="40%" cy="120" r="12" fill="#4CAF50" />
+                                        <circle cx="60%" cy="120" r="12" fill="#4CAF50" />
+                                        <circle cx="90%" cy="120" r="12" fill="#4CAF50" />
+
+                                        <text x="10%" y="145" fill="#aaa" font-size="10" text-anchor="middle">Perm
+                                            1</text>
+                                        <text x="40%" y="145" fill="#aaa" font-size="10" text-anchor="middle">Perm
+                                            2</text>
+                                        <text x="60%" y="145" fill="#aaa" font-size="10" text-anchor="middle">Perm
+                                            3</text>
+                                        <text x="90%" y="145" fill="#aaa" font-size="10" text-anchor="middle">Perm
+                                            4</text>
+                                    </g>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edu-section">
+                <button class="collapsible">Sorting and Searching</button>
+                <div class="content">
+                    <div class="content-inner">
+                        <p>To truly understand how Radix and Counting sort behave, we must compare them against typical
+                            comparison-based sorts side-by-side on the exact same input state.</p>
+                        <div class="key-concept">
+                            <strong>Action:</strong> Toggle the <b>"Compare with QuickSort (Side-by-Side)"</b> checkbox
+                            above and click <button class="primary" style="padding: 2px 6px; border-radius:3px;"
+                                onclick="document.getElementById('compare-qs-checkbox').checked=true; toggleQSLayout(); buildSteps();">Build
+                                Steps</button>.
+                            <br><br>
+                            Observe how QuickSort incrementally partitions the array and physically <em>Swaps</em>
+                            elements based on &lt; / &gt; <em>Comparisons</em>. Radix/Counting Sort, instead, relies
+                            purely on <em>Array Reads/Writes</em> to map elements to frequency auxiliary arrays and
+                            reconstruct them sequentially.
+                            <br><br>
+                            <span style="color:#E91E63"><strong>Role of the Sorting Subroutine (Impact):</strong></span>
+                            Notice inside the Radix Sort visualization that it iteratively runs <b>Counting Sort</b> on
+                            each digit position (Units, Tens, Hundreds).
+                            If this underlying inner-sort was <u>NOT STABLE</u> (meaning it swapped equal elements
+                            arbitrarily), the work done during previous, less significant digit passes would be
+                            completely destroyed, rendering the final array incorrectly sorted! You can see stability
+                            preserved as elements iterate sequentially from right-to-left into their sorted positions
+                            based strictly on the current digit slice without overlapping earlier orderings.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edu-section">
+                <button class="collapsible">Design Paradigm — D&C, DP, or Greedy</button>
+                <div class="content">
+                    <div class="content-inner">
+                        <p>Counting and Radix sorts do <strong>not</strong> natively follow standard <strong>Divide and
+                                Conquer (D&C)</strong>, <strong>Dynamic Programming (DP)</strong>, or
+                            <strong>Greedy</strong> paradigms. They are completely dependent on integer properties.
+                        </p>
+
+                        <table
+                            style="width:100%; text-align:left; border-collapse: collapse; margin-top:15px; background: rgba(255,255,255,0.02); font-size: 0.95rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--accent-color);">
+                                    <th style="padding:12px;">QuickSort / MergeSort (D&C)</th>
+                                    <th style="padding:12px;">Counting / Radix Sort (Distribution / Integer)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding:12px; border-right: 1px solid #333;">Breaks array into smaller,
+                                        independent sub-arrays recursively to sort them on smaller scales.
+                                        <br><br><em>Visualized by the "Active Elements" bounds physically
+                                            shrinking.</em>
+                                    </td>
+                                    <td style="padding:12px;">Iterates over the entire array linearly for each
+                                        digit/pass. No splitting into sub-arrays natively. <br><br><em>Visualized by
+                                            linearly building the prefix frequency array and parsing linearly
+                                            bounds-free.</em></td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding:12px; border-right: 1px solid #333;">Requires stack memory
+                                        proportional to the recursion tree depths (average O(log n)).</td>
+                                    <td style="padding:12px;">Requires explicit auxiliary heap memory arrays mapping
+                                        directly to the data range (O(n+k)). <br><br><strong>Note:</strong> Building the
+                                        Count Frequency Array resembles the state tabulation format of <b>Dynamic
+                                            Programming</b>! We map elements as indices incrementally.</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:12px; border-right: 1px solid #333;">Computes relative element
+                                        order using pairwise ( &gt; or &lt; ) tests across candidates.</td>
+                                    <td style="padding:12px;">Computes absolute index addresses directly based on
+                                        inherent mathematical place values.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div
+                            style="margin-top:15px; background: rgba(255,152,0,0.1); border-left: 4px solid #FF9800; padding:10px;">
+                            <strong>A Wrong Paradigm Choice:</strong> Consider providing Counting sort an array like
+                            <code>[1, 99999]</code>. If we mistakenly force the Distribution paradigm here instead of
+                            standard Divide & Conquer (like Quicksort), Counting sort brutally allocates a 100,000 index
+                            array, completely failing in spatial bounds and degrading entirely past O(n log n). This
+                            demonstrates why selecting the proper paradigm based on input characteristics is paramount!
+                            Try clicking the "Worst Case" preset under Counting Sort to crash the efficiency!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- /Main Panel -->
+    </div>
+
+    <script>
+        // --- State and UI Setup ---
+        let array = [];
+        let stateHistory = [];
+        let currentStep = 0;
+        let isQSEnabled = false;
+        let qsHistory = [];
+
+        function toggleQSLayout() {
+            isQSEnabled = document.getElementById('compare-qs-checkbox').checked;
+            document.getElementById('qs-canvas-wrapper').style.display = isQSEnabled ? 'block' : 'none';
+            document.getElementById('qs-stats-container').style.display = isQSEnabled ? 'flex' : 'none';
+        }
+
+        function generateQuickSortSteps(inputArr) {
+            qsHistory = [];
+            let A = [...inputArr];
+            let comps = 0;
+            let swaps = 0;
+
+            function recordQS(activeIndices, pivotIndex, doneIndices) {
+                // Ensure state is cloned instantly
+                qsHistory.push({
+                    array: [...A],
+                    comps: comps,
+                    swaps: swaps,
+                    active: activeIndices || [],
+                    pivot: pivotIndex !== undefined ? pivotIndex : -1,
+                    done: doneIndices || []
+                });
+            }
+
+            recordQS([], -1, []);
+
+            function qs(low, high) {
+                if (low < high) {
+                    let pi = partition(low, high);
+                    qs(low, pi - 1);
+                    qs(pi + 1, high);
+                }
+            }
+
+            function partition(low, high) {
+                let pivot = A[high];
+                let i = low - 1;
+                recordQS([], high, []);
+                for (let j = low; j < high; j++) {
+                    comps++;
+                    recordQS([j, high], high, []);
+                    if (A[j] <= pivot) {
+                        i++;
+                        if (i !== j) {
+                            swaps++;
+                            let temp = A[i];
+                            A[i] = A[j];
+                            A[j] = temp;
+                            recordQS([i, j], high, []);
+                        }
+                    }
+                }
+                if (i + 1 !== high) {
+                    swaps++;
+                    let temp = A[i + 1];
+                    A[i + 1] = A[high];
+                    A[high] = temp;
+                }
+                recordQS([i + 1, high], i + 1, []);
+                return i + 1;
+            }
+
+            qs(0, A.length - 1);
+            recordQS([], -1, A.map((_, idx) => idx));
+        }
+
+        let isPlaying = false;
+        let playInterval = null;
+        let speedMs = 1000;
+        let currentAlgorithm = 'counting';
+
+        // Elements
+        const vizCanvas = document.getElementById('viz-canvas');
+        const explanationPanel = document.getElementById('step-explanation');
+        const pseudocodePanel = document.getElementById('pseudocode-panel');
+        const historyBody = document.getElementById('history-body');
+        const customInput = document.getElementById('custom-input');
+        const algoSelect = document.getElementById('algorithm-select');
+        const btnPlay = document.getElementById('btn-play');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedDisplay = document.getElementById('speed-display');
+        const stepCounter = document.getElementById('step-counter');
+        const progressFill = document.getElementById('progress-fill');
+        const statusDisplay = document.getElementById('status-display');
+
+        // Stats
+        const statReads = document.getElementById('stat-reads');
+        const statWrites = document.getElementById('stat-writes');
+
+        // UI Listeners
+        speedSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            speedDisplay.innerText = val.toFixed(2);
+            speedMs = 1000 / val;
+            if (isPlaying) {
+                clearTimeout(playInterval);
+                playNext();
+            }
+        });
+
+        algoSelect.addEventListener('change', (e) => {
+            currentAlgorithm = e.target.value;
+            loadPseudocode();
+            loadPreset('random'); // auto load on mode switch to reflect new preset ranges
+            buildSteps(); // Auto-build the new steps immediately to wipe old canvas
+        });
+
+        // Collapsible logic
+        var coll = document.getElementsByClassName("collapsible");
+        for (var i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function () {
+                this.classList.toggle("active-collapse");
+                var content = this.nextElementSibling;
+                if (content.style.maxHeight) {
+                    content.style.maxHeight = null;
+                } else {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                }
+            });
+        }
+
+        // --- Pseudocode Data ---
+        const pseudoData = {
+            counting: [
+                { id: 'c1', text: 'function CountingSort(A):', desc: 'Main function definition.' },
+                { id: 'c2', text: '  max_val = max(A)', desc: 'Find the maximum value in the array to determine Count array size.' },
+                { id: 'c3', text: '  count = array of zeros of size max_val + 1', desc: 'Initialize count array with zeros.' },
+                { id: 'c4', text: '  for x in A:', desc: 'Iterate through each element in the input array.' },
+                { id: 'c5', text: '    count[x] += 1', desc: 'Increment the count for the specific value.' },
+                { id: 'c6', text: '  for i from 1 to max_val:', desc: 'Iterate through the count array.' },
+                { id: 'c7', text: '    count[i] += count[i-1]', desc: 'Compute prefix sums (running total) to find final positions.' },
+                { id: 'c8', text: '  output = array of size length(A)', desc: 'Create the output array.' },
+                { id: 'c9', text: '  for x in reversed(A):', desc: 'Iterate backwards through A to maintain stability.' },
+                { id: 'c10', text: '    count[x] -= 1', desc: 'Decrement the position index.' },
+                { id: 'c11', text: '    output[count[x]] = x', desc: 'Place the element exactly into its sorted position.' },
+                { id: 'c12', text: '  return output', desc: 'Return the sorted array.' }
+            ],
+            radix: [
+                { id: 'r1', text: 'function RadixSort(A):', desc: 'Main function definition.' },
+                { id: 'r2', text: '  max_val = max(A)', desc: 'Find the maximum value to determine number of digits.' },
+                { id: 'r3', text: '  exp = 1', desc: 'Initialize exponent to 1 (1s, 10s, 100s place).' },
+                { id: 'r4', text: '  while max_val / exp > 0:', desc: 'Loop for each digit position.' },
+                { id: 'r5', text: '    CountingSortByDigit(A, exp)', desc: 'Perform a stable sort (Counting Sort) based on the current digit.' },
+                { id: 'r6', text: '    exp *= 10', desc: 'Move to the next significant digit.' },
+                { id: 'r7', text: '  return A', desc: 'Return the fully sorted array.' }
+            ]
+        };
+
+        function loadPseudocode() {
+            pseudocodePanel.innerHTML = '';
+            const lines = pseudoData[currentAlgorithm];
+            lines.forEach((line, index) => {
+                const div = document.createElement('div');
+                div.className = 'code-line';
+                div.id = `line-${line.id}`;
+                div.innerHTML = `
+                <span class="line-num">${index + 1}</span>
+                <span class="code-text" style="white-space: pre;">${line.text}</span>
+                <div class="tooltip">${line.desc}</div>
+            `;
+                pseudocodePanel.appendChild(div);
+            });
+        }
+
+        // --- Inputs & Controls ---
+        function loadPreset(type) {
+            if (type === 'random') {
+                const maxVal = currentAlgorithm === 'radix' ? 999 : 20;
+                customInput.value = Array.from({ length: 12 }, () => Math.floor(Math.random() * maxVal)).join(', ');
+            }
+            if (type === 'sorted') customInput.value = currentAlgorithm === 'radix' ? "10, 22, 35, 40, 55, 61, 78, 89" : "1, 2, 3, 4, 5, 6, 7, 8, 9, 10";
+            if (type === 'reversed') customInput.value = currentAlgorithm === 'radix' ? "90, 80, 75, 62, 51, 44, 33, 22, 11" : "10, 9, 8, 7, 6, 5, 4, 3, 2, 1";
+            if (type === 'worst') {
+                customInput.value = "1, 35, 2, 34, 3"; // shows huge gap for counting sort
+                if (currentAlgorithm === 'radix') customInput.value = "1, 1000, 2, 500, 10";
+            }
+        }
+
+        function buildSteps() {
+            // Auto-generated ID cleanup
+            isPlaying = false;
+            clearTimeout(playInterval);
+
+            let rawValues = customInput.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            if (rawValues.length === 0) {
+                alert("Please enter valid comma-separated numbers.");
+                return;
+            }
+            if (rawValues.some(n => n < 0)) {
+                alert("Visualization currently supports non-negative integers only.");
+                return;
+            }
+
+            array = rawValues;
+            currentStep = 0;
+            stateHistory = [];
+
+            if (isQSEnabled) {
+                generateQuickSortSteps(array);
+            } else {
+                qsHistory = [];
+            }
+
+            if (currentAlgorithm === 'counting') {
+                if (Math.max(...array) > 50) {
+                    if (!confirm(`Max value is ${Math.max(...array)}. Counting Sort visualization draws an array of size max_val + 1. Drawing > 50 items might be very small. Continue?`)) {
+                        return;
+                    }
+                }
+                generateCountingSortSteps(array);
+            } else {
+                generateRadixSortSteps(array);
+            }
+
+            statusDisplay.innerText = "Status: Ready";
+            loadPseudocode();
+            buildHistoryTable();
+            renderStep();
+
+            // Re-draw chart with empirical plot operations
+            let finalStats = stateHistory[stateHistory.length - 1]?.stats || { reads: 0, writes: 0 };
+            currentOps = finalStats.reads + finalStats.writes;
+
+            let qsOpsCount = 0;
+            if (isQSEnabled && qsHistory.length > 0) {
+                let finalQS = qsHistory[qsHistory.length - 1];
+                qsOpsCount = finalQS.comps + finalQS.swaps;
+            }
+
+            drawComplexityChart(parseInt(document.getElementById('k-slider').value), array.length, currentOps, qsOpsCount);
+        }
+
+        let currentOps = 0;
+
+        function recordState(desc, activePseudoId, arrays, highlights = {}, stats = { reads: 0, writes: 0 }) {
+            // Deep clone arrays for history
+            const cl = arr => arr ? JSON.parse(JSON.stringify(arr)) : null;
+
+            stateHistory.push({
+                desc: desc,
+                activeLine: activePseudoId,
+                input: cl(arrays.input),
+                count: cl(arrays.count),
+                output: cl(arrays.output),
+                buckets: arrays.buckets ? cl(arrays.buckets) : null,
+                radixExp: arrays.radixExp || 1,
+                highlights: cl(highlights),
+                stats: cl(stats)
+            });
+        }
+
+        // --- Algorithm Generations ---
+        function generateCountingSortSteps(arr) {
+            let stats = { reads: 0, writes: 0 };
+            let input = [...arr];
+            let max_val = 0;
+
+            recordState(`Starting Counting Sort. Initial Array: [${input.join(', ')}]`, 'c1', { input });
+
+            // Find max
+            for (let i = 0; i < input.length; i++) {
+                stats.reads++;
+                if (input[i] > max_val) max_val = input[i];
+                recordState(`Finding max: Array[${i}] is ${input[i]}, Current max is ${max_val}`, 'c2', { input }, { inputIndex: [i] }, stats);
+            }
+
+            // Init count
+            let count = new Array(max_val + 1).fill(0);
+            recordState(`Created Count array of size ${max_val + 1} with zeros.`, 'c3', { input, count }, {}, stats);
+
+            // Count frequencies
+            for (let i = 0; i < input.length; i++) {
+                stats.reads++;
+                let val = input[i];
+                count[val]++;
+                stats.writes++;
+                recordState(`Found value ${val}. Incrementing Count[${val}] to ${count[val]}.`, 'c5', { input, count }, { inputIndex: [i], countIndex: [val] }, stats);
+            }
+
+            // Prefix sums
+            recordState(`Starting to calculate prefix sums on Count array.`, 'c6', { input, count }, {}, stats);
+            for (let i = 1; i < count.length; i++) {
+                stats.reads += 2;
+                count[i] += count[i - 1];
+                stats.writes++;
+                recordState(`Adding Count[${i - 1}] to Count[${i}]. Count[${i}] is now ${count[i]}.`, 'c7', { input, count }, { countIndex: [i, i - 1] }, stats);
+            }
+
+            // Output array
+            let output = new Array(input.length).fill(null);
+            recordState(`Created Output array of size ${input.length}. Values are placed starting from right to maintain stability.`, 'c8', { input, count, output }, {}, stats);
+
+            for (let i = input.length - 1; i >= 0; i--) {
+                stats.reads += 2; // read input[i], read count[val]
+                let val = input[i];
+                count[val]--;
+                stats.writes += 2; // write count, write output
+                let pos = count[val];
+                output[pos] = val;
+                recordState(`Placing ${val} at index ${pos} in Output array. Decremented Count[${val}].`, 'c11', { input, count, output }, { inputIndex: [i], countIndex: [val], outputIndex: [pos] }, stats);
+            }
+
+            recordState(`Sorting complete! Output array is completely sorted.`, 'c12', { input, count, output }, { done: true }, stats);
+        }
+
+        function generateRadixSortSteps(arr) {
+            let stats = { reads: 0, writes: 0 };
+            let input = [...arr];
+            let max_val = 0;
+
+            recordState(`Starting Radix Sort. Initial Array: [${input.join(', ')}]`, 'r1', { input }, {}, stats);
+
+            for (let i = 0; i < input.length; i++) {
+                stats.reads++;
+                if (input[i] > max_val) max_val = input[i];
+            }
+            recordState(`Max value is ${max_val}.`, 'r2', { input }, {}, stats);
+
+            let exp = 1;
+            recordState(`Starting with 1s place (exp = 1).`, 'r3', { input }, {}, stats);
+
+            while (Math.floor(max_val / exp) > 0) {
+                recordState(`Processing digit pass for exp = ${exp} (${exp}s place).`, 'r4', { input, radixExp: exp }, {}, stats);
+
+                // Subroutine Counting Sort logic adapted for Radix visualization
+                let count = new Array(10).fill(0);
+                let buckets = Array.from({ length: 10 }, () => []);
+                recordState(`Running stable digit-sort (Counting Sort). Initializing base-10 Count array and Buckets.`, 'r5', { input, count, buckets, radixExp: exp }, {}, stats);
+
+                // Collect frequencies based on digit
+                for (let i = 0; i < input.length; i++) {
+                    stats.reads++;
+                    let digit = Math.floor(input[i] / exp) % 10;
+                    count[digit]++;
+                    stats.writes++;
+                    buckets[digit].push(input[i]);
+                    recordState(`Value ${input[i]} has digit ${digit} at ${exp}s place. Drop into Bucket ${digit}. Increment Count[${digit}].`, 'r5', { input, count, buckets, radixExp: exp }, { inputIndex: [i], countIndex: [digit], highlightDigit: exp }, stats);
+                }
+
+                // Prefix
+                for (let i = 1; i < 10; i++) {
+                    stats.reads += 2;
+                    count[i] += count[i - 1];
+                    stats.writes++;
+                }
+                recordState(`Computed prefix sums for base-10 Count array.`, 'r5', { input, count, buckets, radixExp: exp }, {}, stats);
+
+                // Output placement
+                let output = new Array(input.length).fill(null);
+                for (let i = input.length - 1; i >= 0; i--) {
+                    stats.reads += 2;
+                    let digit = Math.floor(input[i] / exp) % 10;
+                    count[digit]--;
+                    let pos = count[digit];
+                    output[pos] = input[i];
+                    stats.writes += 2;
+                    recordState(`Placing ${input[i]} at Output[${pos}] based on digit ${digit}.`, 'r5', { input, count, output, buckets, radixExp: exp }, { inputIndex: [i], countIndex: [digit], outputIndex: [pos], highlightDigit: exp }, stats);
+                }
+
+                input = [...output];
+                recordState(`Pass complete for ${exp}s place. Copied sorted Output back to Input.`, 'r5', { input, radixExp: exp }, {}, stats);
+
+                exp *= 10;
+                if (Math.floor(max_val / exp) > 0) {
+                    recordState(`Moving to next significant digit. exp is now ${exp}.`, 'r6', { input, radixExp: exp }, {}, stats);
+                }
+            }
+
+            recordState(`Radix Sort complete! Largest digit fully processed.`, 'r7', { input }, { done: true }, stats);
+        }
+
+        // --- Playback ---
+        function playAnimation() {
+            if (stateHistory.length === 0 || isPlaying) return;
+            isPlaying = true;
+            statusDisplay.innerText = "Status: Playing";
+            playNext();
+        }
+
+        function pauseAnimation() {
+            if (!isPlaying) return;
+            isPlaying = false;
+            clearTimeout(playInterval);
+            statusDisplay.innerText = "Status: Paused";
+        }
+
+        function playNext() {
+            if (currentStep < stateHistory.length - 1) {
+                stepNext();
+                playInterval = setTimeout(playNext, speedMs);
+            } else {
+                pauseAnimation(); // stop playing
+                statusDisplay.innerText = "Status: Done";
+            }
+        }
+
+        function stepNext() {
+            if (currentStep < stateHistory.length - 1) {
+                currentStep++;
+                renderStep();
+            }
+        }
+
+        function stepPrev() {
+            if (currentStep > 0) {
+                currentStep--;
+                renderStep();
+                if (!isPlaying) statusDisplay.innerText = "Status: Paused";
+            }
+        }
+
+        function reset() {
+            if (isPlaying) togglePlay();
+            currentStep = 0;
+            statusDisplay.innerText = "Status: Ready";
+            renderStep();
+        }
+
+        function jumpToStep(step) {
+            if (isPlaying) togglePlay();
+            currentStep = step;
+            statusDisplay.innerText = "Status: Paused";
+            renderStep();
+        }
+
+        // --- History View ---
+        function buildHistoryTable() {
+            historyBody.innerHTML = '';
+            stateHistory.forEach((state, idx) => {
+                const tr = document.createElement('tr');
+                tr.id = `hist-row-${idx}`;
+                tr.onclick = () => jumpToStep(idx);
+
+                let arrStr = state.output ? state.output.map(x => x === null ? '-' : x).join(', ') : state.input.join(', ');
+                if (arrStr.length > 25) arrStr = arrStr.substring(0, 25) + '...';
+
+                tr.innerHTML = `
+                <td>${idx}</td>
+                <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${state.desc}">${state.desc}</td>
+                <td>[${arrStr}]</td>
+            `;
+                historyBody.appendChild(tr);
+            });
+        }
+
+        // --- SVG Drawing Helpers ---
+        function renderStep() {
+            if (stateHistory.length === 0) return;
+
+            const state = stateHistory[currentStep];
+
+            // Update UI Text
+            stepCounter.innerText = `Step: ${currentStep} / ${stateHistory.length - 1}`;
+            explanationPanel.innerHTML = state.desc;
+            const progress = (currentStep / (stateHistory.length - 1)) * 100;
+            progressFill.style.width = `${progress}%`;
+
+            // Update Stats
+            if (state.stats) {
+                statReads.innerText = state.stats.reads;
+                statWrites.innerText = state.stats.writes;
+            }
+
+            // Highlight Pseudocode
+            document.querySelectorAll('.code-line.active').forEach(e => e.classList.remove('active'));
+            if (state.activeLine) {
+                const lineEl = document.getElementById(`line-${state.activeLine}`);
+                if (lineEl) {
+                    lineEl.classList.add('active');
+                    // Auto Scroll
+                    lineEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+
+            // Highlight History
+            document.querySelectorAll('tr.active-row').forEach(e => e.classList.remove('active-row'));
+            const row = document.getElementById(`hist-row-${currentStep}`);
+            if (row) {
+                row.classList.add('active-row');
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // Draw SVG
+            drawSVG(state);
+
+            // Draw QS Side-by-Side if active
+            if (isQSEnabled && qsHistory.length > 0) {
+                // Map currentStep proportionally to QuickSort steps so they finish roughly together visually
+                let pct = currentStep / (stateHistory.length - 1);
+                let qsIdx = Math.floor(pct * (qsHistory.length - 1));
+                if (isNaN(qsIdx) || qsIdx < 0) qsIdx = 0;
+
+                let qsState = qsHistory[qsIdx];
+                document.getElementById('qs-stat-comps').innerText = qsState.comps;
+                document.getElementById('qs-stat-swaps').innerText = qsState.swaps;
+                drawQS(qsState);
+            }
+        }
+
+        function drawSVG(state) {
+            vizCanvas.innerHTML = ''; // clear
+
+            const svgW = vizCanvas.clientWidth || 600;
+            const svgH = vizCanvas.clientHeight || 360;
+
+            // Determine layout based on present arrays
+            let sections = 1;
+            if (state.count) sections++;
+            if (state.output) sections++;
+
+            // Allocate extra space if we need to draw 2D Radix buckets
+            if (state.buckets) sections += 1.6;
+
+            const sectionH = svgH / sections;
+
+            // Helper to draw an array as a row of boxes or bars
+            const drawArray = (arr, label, yOffset, isCountArray, isOutput) => {
+                if (!arr) return;
+
+                // To properly fit items, boxW scales down if many items
+                const padding = 20;
+                const availableSpace = svgW - padding * 2;
+                const maxBoxW = 50;
+                const minBoxW = 20;
+                let boxW = Math.min(maxBoxW, Math.max(minBoxW, availableSpace / arr.length));
+
+                const startX = padding + (availableSpace - (arr.length * boxW)) / 2;
+                const maxVal = Math.max(...arr.filter(x => x !== null), 10);
+
+                // Draw label
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", 10);
+                text.setAttribute("y", yOffset + 15);
+                text.setAttribute("fill", "white");
+                text.setAttribute("font-size", "14px");
+                text.setAttribute("font-family", "monospace");
+                text.textContent = label;
+                vizCanvas.appendChild(text);
+
+                arr.forEach((val, i) => {
+                    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                    const basex = startX + i * boxW;
+
+                    // Determine Highlights
+                    let isActive = false;
+                    let isTarget = false;
+
+                    if (state.highlights) {
+                        if (!isCountArray && !isOutput && state.highlights.inputIndex?.includes(i)) isActive = true;
+                        if (isCountArray && state.highlights.countIndex?.includes(i)) isTarget = true;
+                        if (isOutput && state.highlights.outputIndex?.includes(i)) isTarget = true;
+                    }
+
+                    let fillColor = "var(--color-idle)";
+                    if (isCountArray) fillColor = "var(--color-count)";
+                    if (state.highlights?.done) fillColor = "var(--color-sorted)"; // all green at end
+
+                    if (isActive) fillColor = "var(--color-compare)";
+                    if (isTarget) fillColor = "var(--color-active)";
+
+                    // Draw Box/Bar
+                    if (val !== null) {
+                        let rectH = boxW * 0.8; // default squareish for count array
+                        let rectY = yOffset + sectionH / 2 - rectH / 2;
+
+                        if (!isCountArray) {
+                            // Bars for input/output
+                            // Provide extra padding at the top so tall bars don't clip the label
+                            const maxBarH = sectionH * 0.55;
+                            rectH = Math.max(15, (val / maxVal) * maxBarH);
+                            rectY = yOffset + sectionH - rectH - 30; // Push bar line down slightly
+                        }
+
+                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        rect.setAttribute("x", basex);
+                        rect.setAttribute("y", rectY);
+                        rect.setAttribute("width", boxW * 0.85);
+                        rect.setAttribute("height", rectH);
+                        rect.setAttribute("fill", fillColor);
+                        rect.setAttribute("rx", "2");
+                        rect.classList.add("bar");
+                        if (isActive || isTarget) {
+                            rect.setAttribute("stroke", "white");
+                            rect.setAttribute("stroke-width", "2");
+                        }
+                        g.appendChild(rect);
+
+                        // Value Text
+                        const vText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                        vText.setAttribute("x", basex + (boxW * 0.425));
+                        vText.setAttribute("y", isCountArray ? (rectY + rectH / 2 + 4) : (rectY - 5));
+                        vText.setAttribute("class", "bar-label");
+                        if (isTarget && isCountArray) vText.style.fill = "#111";
+                        if (boxW < 25) vText.setAttribute("font-size", "10px");
+
+                        // Radix highlighting
+                        if (state.radixExp && state.highlights?.highlightDigit && (isActive || isTarget) && !isCountArray) {
+                            const digitStr = val.toString();
+                            const expStr = state.radixExp.toString();
+                            let targetIdx = digitStr.length - expStr.length;
+
+                            let displayHtml = '';
+                            if (targetIdx >= 0) {
+                                displayHtml = `${digitStr.substring(0, targetIdx)}<tspan fill="var(--color-radix)" font-weight="bold" stroke="black" stroke-width="0.5">${digitStr[targetIdx]}</tspan>${digitStr.substring(targetIdx + 1)}`;
+                            } else {
+                                // The digit is implicitly 0, visualize it by showing a leading zero in radix color
+                                displayHtml = `<tspan fill="var(--color-radix)" font-weight="bold" stroke="black" stroke-width="0.5">0</tspan>${digitStr}`;
+                            }
+                            vText.innerHTML = displayHtml;
+                        } else {
+                            vText.textContent = val;
+                        }
+                        g.appendChild(vText);
+                    } else {
+                        // Empty placeholder
+                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        rect.setAttribute("x", basex);
+                        const eH = boxW * 0.6;
+                        rect.setAttribute("y", yOffset + sectionH / 2 - eH / 2);
+                        rect.setAttribute("width", boxW * 0.85);
+                        rect.setAttribute("height", eH);
+                        rect.setAttribute("fill", "transparent");
+                        rect.setAttribute("stroke", "#555");
+                        rect.setAttribute("stroke-dasharray", "2");
+                        g.appendChild(rect);
+                    }
+
+                    // Index Text
+                    const idxText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    idxText.setAttribute("x", basex + (boxW * 0.425));
+                    idxText.setAttribute("y", yOffset + sectionH - 10);
+                    idxText.setAttribute("class", "index-label");
+                    if (boxW < 25) idxText.setAttribute("font-size", "8px");
+                    idxText.textContent = `[${i}]`;
+
+                    // For count array in Radix sort, the index is the base-10 digit
+                    if (isCountArray && state.radixExp) {
+                        idxText.textContent = `d:${i}`;
+                    }
+
+                    g.appendChild(idxText);
+                    vizCanvas.appendChild(g);
+                });
+            };
+
+            let currentY = 0;
+
+            drawArray(state.input, "Input / Active:", currentY, false, false);
+            currentY += sectionH;
+
+            if (state.count) {
+                drawArray(state.count, "Count Array:", currentY, true, false);
+                currentY += sectionH;
+            }
+
+            if (state.buckets) {
+                // Draw Explicit 2D Buckets right below Count
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", 10);
+                text.setAttribute("y", currentY + 25);
+                text.setAttribute("fill", "white");
+                text.setAttribute("font-size", "14px");
+                text.setAttribute("font-family", "monospace");
+                text.textContent = "Explicit Base-10 Buckets:";
+                vizCanvas.appendChild(text);
+
+                const padding = 20;
+                const availableSpace = svgW - padding * 2;
+                const boxW = Math.min(45, Math.max(20, availableSpace / 10));
+                const startX = padding + (availableSpace - (10 * boxW)) / 2;
+
+                state.buckets.forEach((bucket, i) => {
+                    const basex = startX + i * boxW;
+
+                    const baseRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    baseRect.setAttribute("x", basex);
+                    baseRect.setAttribute("y", currentY + (sectionH * 1.2) - 10);
+                    baseRect.setAttribute("width", boxW * 0.85);
+                    baseRect.setAttribute("height", 4);
+                    baseRect.setAttribute("fill", "#666");
+                    vizCanvas.appendChild(baseRect);
+
+                    const idxText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    idxText.setAttribute("x", basex + (boxW * 0.425));
+                    idxText.setAttribute("y", currentY + (sectionH * 1.2) + 2);
+                    idxText.setAttribute("class", "index-label");
+                    idxText.setAttribute("font-size", "10px");
+                    idxText.textContent = `B${i}`;
+                    vizCanvas.appendChild(idxText);
+
+                    bucket.forEach((val, j) => {
+                        const itemH = 15;
+                        const itemY = currentY + (sectionH * 1.2) - 10 - (j + 1) * (itemH + 2);
+
+                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        rect.setAttribute("x", basex);
+                        rect.setAttribute("y", itemY);
+                        rect.setAttribute("width", boxW * 0.85);
+                        rect.setAttribute("height", itemH);
+                        rect.setAttribute("fill", "var(--color-radix)");
+                        rect.setAttribute("rx", "2");
+                        vizCanvas.appendChild(rect);
+
+                        const vText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                        vText.setAttribute("x", basex + (boxW * 0.425));
+                        vText.setAttribute("y", itemY + 11);
+                        vText.setAttribute("class", "bar-label");
+                        vText.setAttribute("font-size", "10px");
+                        vText.style.fill = "#111";
+                        vText.textContent = val;
+                        vizCanvas.appendChild(vText);
+                    });
+                });
+
+                currentY += (sectionH * 1.6);
+            }
+
+            if (state.output) {
+                drawArray(state.output, "Output Array:", currentY, false, true);
+            }
+        }
+
+        // --- Complexity Chart & Extended Visuals ---
+        function drawComplexityChart(kValue, nValue = 12, opsCount = 0, qsOpsCount = 0) {
+            const chart = document.getElementById('complexity-chart');
+            if (!chart) return;
+            chart.innerHTML = '';
+
+            const w = chart.clientWidth || 300;
+            const h = chart.clientHeight || 200;
+            const pad = 30;
+
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.innerHTML = `
+                <line x1="${pad}" y1="${h - pad}" x2="${w}" y2="${h - pad}" stroke="#888" stroke-width="2"/>
+                <line x1="${pad}" y1="0" x2="${pad}" y2="${h - pad}" stroke="#888" stroke-width="2"/>
+                <text x="${w - 40}" y="${h - 10}" fill="#888" font-size="12">Size (n)</text>
+                <text x="${5}" y="${15}" fill="#888" font-size="12" transform="rotate(-90 10,20)">Time / Ops</text>
+            `;
+
+            let ptsNLogN = [];
+            let ptsNPlusK = [];
+            let ptsDNPlusK = [];
+
+            const maxN = 100;
+            const scaleX = (w - pad - 10) / maxN;
+            const scaleY = (h - pad - 10) / 800;
+
+            for (let n = 1; n <= maxN; n += 2) {
+                let x = pad + n * scaleX;
+
+                // O(n log n)
+                let y1 = h - pad - (n * Math.log2(n)) * scaleY;
+                ptsNLogN.push(`${x},${Math.max(10, y1)}`);
+
+                // O(n + k)
+                let y2 = h - pad - (n + kValue * 10) * scaleY;
+                ptsNPlusK.push(`${x},${Math.max(10, y2)}`);
+
+                // O(d * (n + k))
+                let y3 = h - pad - (3 * (n + 10)) * scaleY;
+                ptsDNPlusK.push(`${x},${Math.max(10, y3)}`);
+            }
+
+            g.innerHTML += `
+                <polyline points="${ptsNLogN.join(' ')}" fill="none" stroke="#2196F3" stroke-width="3"/>
+                <polyline points="${ptsNPlusK.join(' ')}" fill="none" stroke="#FF9800" stroke-width="3"/>
+                <polyline points="${ptsDNPlusK.join(' ')}" fill="none" stroke="#E91E63" stroke-width="3"/>
+            `;
+
+            // Draw Empirical Dot
+            if (nValue && opsCount > 0) {
+                let scaledN = pad + nValue * scaleX;
+                let scaledOps = h - pad - opsCount * scaleY;
+
+                // Keep it in frame vertically
+                if (scaledOps < 10) scaledOps = 10;
+
+                g.innerHTML += `
+                    <circle cx="${scaledN}" cy="${scaledOps}" r="5" fill="#FFF" stroke="#222" stroke-width="2"/>
+                    <line x1="${scaledN}" y1="${h - pad}" x2="${scaledN}" y2="${scaledOps}" stroke="#FFF" stroke-width="1" stroke-dasharray="2" />
+                    <line x1="${pad}" y1="${scaledOps}" x2="${scaledN}" y2="${scaledOps}" stroke="#FFF" stroke-width="1" stroke-dasharray="2" />
+                `;
+            }
+
+            // Draw QS Empirical Dot
+            if (nValue && qsOpsCount > 0) {
+                let scaledN = pad + nValue * scaleX;
+                let scaledQsOps = h - pad - qsOpsCount * scaleY;
+                if (scaledQsOps < 10) scaledQsOps = 10;
+
+                g.innerHTML += `
+                    <circle cx="${scaledN}" cy="${scaledQsOps}" r="5" fill="#2196F3" stroke="#222" stroke-width="2"/>
+                    <line x1="${pad}" y1="${scaledQsOps}" x2="${scaledN}" y2="${scaledQsOps}" stroke="#2196F3" stroke-width="1" stroke-dasharray="2" />
+                `;
+            }
+
+            chart.appendChild(g);
+        }
+
+        function drawQS(qsState) {
+            const qsCanvas = document.getElementById('viz-canvas-qs');
+            if (!qsCanvas) return;
+            qsCanvas.innerHTML = '';
+
+            const svgW = qsCanvas.clientWidth || 400;
+            const svgH = qsCanvas.clientHeight || 320;
+
+            const arr = qsState.array;
+            if (!arr || arr.length === 0) return;
+
+            const padding = 20;
+            const availableSpace = svgW - padding * 2;
+            const boxW = Math.min(45, Math.max(15, availableSpace / arr.length));
+            const startX = padding + (availableSpace - (arr.length * boxW)) / 2;
+            const maxVal = Math.max(...arr, 10);
+
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+            arr.forEach((val, i) => {
+                const basex = startX + i * boxW;
+
+                let fillColor = "var(--color-idle)";
+                if (qsState.done.includes(i)) fillColor = "var(--color-sorted)";
+                else if (qsState.active.includes(i)) fillColor = "var(--color-compare)";
+                else if (qsState.pivot === i) fillColor = "var(--color-radix)";
+
+                const rectH = Math.max(15, (val / maxVal) * (svgH * 0.7));
+                const rectY = svgH - rectH - 40;
+
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", basex);
+                rect.setAttribute("y", rectY);
+                rect.setAttribute("width", boxW * 0.85);
+                rect.setAttribute("height", rectH);
+                rect.setAttribute("fill", fillColor);
+                rect.setAttribute("rx", "2");
+                if (fillColor !== "var(--color-idle)" && fillColor !== "var(--color-sorted)") {
+                    rect.setAttribute("stroke", "white");
+                    rect.setAttribute("stroke-width", "1");
+                }
+                g.appendChild(rect);
+
+                const vText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                vText.setAttribute("x", basex + (boxW * 0.425));
+                vText.setAttribute("y", rectY - 5);
+                vText.setAttribute("class", "bar-label");
+                if (boxW < 25) vText.setAttribute("font-size", "10px");
+                vText.textContent = val;
+                g.appendChild(vText);
+
+                const idxText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                idxText.setAttribute("x", basex + (boxW * 0.425));
+                idxText.setAttribute("y", svgH - 25);
+                idxText.setAttribute("class", "index-label");
+                if (boxW < 25) idxText.setAttribute("font-size", "8px");
+                idxText.textContent = `[${i}]`;
+                g.appendChild(idxText);
+            });
+            qsCanvas.appendChild(g);
+        }
+
+        // --- Init ---
+        window.onload = () => {
+            loadPseudocode();
+            loadPreset('random');
+            // Initial setup
+            setTimeout(() => {
+                document.getElementById('n-slider').value = array.length;
+                drawComplexityChart(5, array.length, currentOps);
+            }, 100); // small delay to ensure DOM layout is computed for chart dimensions
+            buildSteps();
+        };
+    </script>
+</body>
+
+</html>
