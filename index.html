@@ -42,9 +42,7 @@
             display: flex;
             min-height: 100vh;
             overflow-x: hidden;
-            /* Prevent horizontal scroll on body */
             line-height: 1.5;
-            width: 100vw;
         }
 
         /* Layout Container */
@@ -52,15 +50,6 @@
             display: flex;
             width: 100%;
             height: 100vh;
-            overflow: hidden;
-        }
-
-        @media (max-width: 980px) {
-            .app-container {
-                overflow: auto;
-                height: auto;
-                flex-direction: column;
-            }
         }
 
         /* Left Column: Controls (fixed width) */
@@ -107,7 +96,6 @@
         .panel-section {
             padding: 20px;
             border-bottom: 1px solid var(--border-color);
-            width: 100%;
         }
 
         h1,
@@ -146,14 +134,12 @@
         input[type="text"],
         select {
             width: 100%;
-            padding: 10px 12px;
+            padding: 8px 12px;
             background: #2a2a2a;
             border: 1px solid var(--border-color);
             color: white;
             border-radius: 4px;
             font-family: var(--font-mono);
-            font-size: 16px;
-            /* Prevents auto-zoom on iOS */
         }
 
         input[type="range"] {
@@ -173,14 +159,13 @@
             background-color: #333;
             color: white;
             border: 1px solid #555;
-            padding: 10px 8px;
-            /* Larger touch targets */
+            padding: 8px 6px;
             border-radius: 4px;
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
             font-weight: 500;
             flex: 1;
-            min-width: 85px;
+            min-width: 80px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -261,20 +246,6 @@
             align-items: center;
             background: rgba(0, 0, 0, 0.2);
             border-bottom: 1px solid var(--border-color);
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        @media (max-width: 600px) {
-            .viz-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .stat-counters {
-                width: 100%;
-                justify-content: flex-start !important;
-            }
         }
 
         .viz-canvas-container {
@@ -285,26 +256,6 @@
             align-items: center;
             background-color: #1a1a1a;
             border-bottom: 1px solid var(--border-color);
-            transition: flex-direction 0.3s;
-        }
-
-        /* Stack charts on smaller screens */
-        @media (max-width: 900px) {
-            .viz-canvas-container {
-                flex-direction: column;
-                height: auto;
-            }
-
-            .viz-wrapper {
-                width: 100% !important;
-            }
-
-            #qs-canvas-wrapper {
-                border-left: none !important;
-                border-top: 2px solid #333;
-                padding-left: 0 !important;
-                padding-top: 20px;
-            }
         }
 
         svg#viz-canvas {
@@ -366,8 +317,6 @@
             border-radius: 4px;
             overflow-y: auto;
             max-height: 250px;
-            word-break: break-all;
-            white-space: pre-wrap;
         }
 
         .code-line {
@@ -442,7 +391,6 @@
             padding: 8px 10px;
             text-align: left;
             border-bottom: 1px solid #333;
-            word-break: break-word;
         }
 
         th {
@@ -485,21 +433,6 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             margin: 0 20px 20px 20px;
-            overflow: hidden;
-        }
-
-        @media (max-width: 600px) {
-
-            .edu-section,
-            .panel-section,
-            .bottom-sections {
-                margin: 0 10px 15px 10px !important;
-            }
-
-            .panel-section,
-            .card {
-                padding: 15px 10px !important;
-            }
         }
 
         .collapsible {
@@ -547,9 +480,6 @@
 
         .content-inner {
             padding: 20px 0;
-            overflow-x: auto;
-            /* Ensure tables don't break parent width */
-            -webkit-overflow-scrolling: touch;
         }
 
         .key-concept {
@@ -690,25 +620,28 @@
         <div class="main-panel">
 
             <div class="viz-header">
-                <h2 style="font-size: clamp(1rem, 4vw, 1.3rem); margin-bottom: 5px;">Visualization Area</h2>
-                <div class="stat-counters" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
-                    <div class="stat-item" style="padding: 5px 10px; min-width: 80px;">
-                        <span class="stat-value" id="stat-reads" style="font-size: 1.1rem;">0</span>
-                        <span class="stat-label" style="font-size: 0.65rem;">Reads</span>
+                <h2>Visualization Area</h2>
+                <div class="stat-counters" style="align-items:center;">
+                    <div class="stat-item">
+                        <span class="stat-value" id="stat-reads">0</span>
+                        <span class="stat-label">Array Reads</span>
                     </div>
-                    <div class="stat-item" style="padding: 5px 10px; min-width: 80px;">
-                        <span class="stat-value" id="stat-writes" style="font-size: 1.1rem;">0</span>
-                        <span class="stat-label" style="font-size: 0.65rem;">Writes</span>
+                    <div class="stat-item">
+                        <span class="stat-value" id="stat-writes">0</span>
+                        <span class="stat-label">Array Writes</span>
                     </div>
 
                     <!-- QuickSort Stats -->
                     <div id="qs-stats-container"
-                        style="display:none; border-left: 1px solid #555; padding-left: 10px; align-items:center; gap:8px;">
-                        <div class="stat-item"
-                            style="background: rgba(244,67,54,0.1); padding: 5px 10px; min-width: 80px;">
-                            <span class="stat-value" id="qs-stat-comps"
-                                style="color:#f44336; font-size: 1.1rem;">0</span>
-                            <span class="stat-label" style="font-size: 0.65rem;">QS Comps</span>
+                        style="display:none; border-left: 1px solid #555; padding-left: 20px; margin-left: 10px; align-items:center; gap:15px;">
+                        <div style="color: #f44336; font-size: 0.8rem; font-weight:bold; width: 60px;">QS Stats:</div>
+                        <div class="stat-item" style="background: rgba(244,67,54,0.1);">
+                            <span class="stat-value" id="qs-stat-comps" style="color:#f44336;">0</span>
+                            <span class="stat-label">Comps</span>
+                        </div>
+                        <div class="stat-item" style="background: rgba(244,67,54,0.1);">
+                            <span class="stat-value" id="qs-stat-swaps" style="color:#f44336;">0</span>
+                            <span class="stat-label">Swaps</span>
                         </div>
                     </div>
                 </div>
@@ -2084,11 +2017,6 @@
             });
             qsCanvas.appendChild(g);
         }
-
-        // --- Responsive Re-render ---
-        window.addEventListener('resize', () => {
-            if (stateHistory.length > 0) renderStep();
-        });
 
         // --- Init ---
         window.onload = () => {
