@@ -42,7 +42,9 @@
             display: flex;
             min-height: 100vh;
             overflow-x: hidden;
+            /* Prevent horizontal scroll on body */
             line-height: 1.5;
+            width: 100vw;
         }
 
         /* Layout Container */
@@ -50,6 +52,15 @@
             display: flex;
             width: 100%;
             height: 100vh;
+            overflow: hidden;
+        }
+
+        @media (max-width: 980px) {
+            .app-container {
+                overflow: auto;
+                height: auto;
+                flex-direction: column;
+            }
         }
 
         /* Left Column: Controls (fixed width) */
@@ -96,6 +107,7 @@
         .panel-section {
             padding: 20px;
             border-bottom: 1px solid var(--border-color);
+            width: 100%;
         }
 
         h1,
@@ -134,12 +146,14 @@
         input[type="text"],
         select {
             width: 100%;
-            padding: 8px 12px;
+            padding: 10px 12px;
             background: #2a2a2a;
             border: 1px solid var(--border-color);
             color: white;
             border-radius: 4px;
             font-family: var(--font-mono);
+            font-size: 16px;
+            /* Prevents auto-zoom on iOS */
         }
 
         input[type="range"] {
@@ -159,13 +173,14 @@
             background-color: #333;
             color: white;
             border: 1px solid #555;
-            padding: 8px 6px;
+            padding: 10px 8px;
+            /* Larger touch targets */
             border-radius: 4px;
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
             font-weight: 500;
             flex: 1;
-            min-width: 80px;
+            min-width: 85px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -246,6 +261,20 @@
             align-items: center;
             background: rgba(0, 0, 0, 0.2);
             border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .viz-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .stat-counters {
+                width: 100%;
+                justify-content: flex-start !important;
+            }
         }
 
         .viz-canvas-container {
@@ -256,6 +285,26 @@
             align-items: center;
             background-color: #1a1a1a;
             border-bottom: 1px solid var(--border-color);
+            transition: flex-direction 0.3s;
+        }
+
+        /* Stack charts on smaller screens */
+        @media (max-width: 900px) {
+            .viz-canvas-container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .viz-wrapper {
+                width: 100% !important;
+            }
+
+            #qs-canvas-wrapper {
+                border-left: none !important;
+                border-top: 2px solid #333;
+                padding-left: 0 !important;
+                padding-top: 20px;
+            }
         }
 
         svg#viz-canvas {
@@ -317,6 +366,8 @@
             border-radius: 4px;
             overflow-y: auto;
             max-height: 250px;
+            word-break: break-all;
+            white-space: pre-wrap;
         }
 
         .code-line {
@@ -391,6 +442,7 @@
             padding: 8px 10px;
             text-align: left;
             border-bottom: 1px solid #333;
+            word-break: break-word;
         }
 
         th {
@@ -433,6 +485,21 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             margin: 0 20px 20px 20px;
+            overflow: hidden;
+        }
+
+        @media (max-width: 600px) {
+
+            .edu-section,
+            .panel-section,
+            .bottom-sections {
+                margin: 0 10px 15px 10px !important;
+            }
+
+            .panel-section,
+            .card {
+                padding: 15px 10px !important;
+            }
         }
 
         .collapsible {
@@ -480,6 +547,9 @@
 
         .content-inner {
             padding: 20px 0;
+            overflow-x: auto;
+            /* Ensure tables don't break parent width */
+            -webkit-overflow-scrolling: touch;
         }
 
         .key-concept {
@@ -620,28 +690,25 @@
         <div class="main-panel">
 
             <div class="viz-header">
-                <h2>Visualization Area</h2>
-                <div class="stat-counters" style="align-items:center;">
-                    <div class="stat-item">
-                        <span class="stat-value" id="stat-reads">0</span>
-                        <span class="stat-label">Array Reads</span>
+                <h2 style="font-size: clamp(1rem, 4vw, 1.3rem); margin-bottom: 5px;">Visualization Area</h2>
+                <div class="stat-counters" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <div class="stat-item" style="padding: 5px 10px; min-width: 80px;">
+                        <span class="stat-value" id="stat-reads" style="font-size: 1.1rem;">0</span>
+                        <span class="stat-label" style="font-size: 0.65rem;">Reads</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="stat-writes">0</span>
-                        <span class="stat-label">Array Writes</span>
+                    <div class="stat-item" style="padding: 5px 10px; min-width: 80px;">
+                        <span class="stat-value" id="stat-writes" style="font-size: 1.1rem;">0</span>
+                        <span class="stat-label" style="font-size: 0.65rem;">Writes</span>
                     </div>
 
                     <!-- QuickSort Stats -->
                     <div id="qs-stats-container"
-                        style="display:none; border-left: 1px solid #555; padding-left: 20px; margin-left: 10px; align-items:center; gap:15px;">
-                        <div style="color: #f44336; font-size: 0.8rem; font-weight:bold; width: 60px;">QS Stats:</div>
-                        <div class="stat-item" style="background: rgba(244,67,54,0.1);">
-                            <span class="stat-value" id="qs-stat-comps" style="color:#f44336;">0</span>
-                            <span class="stat-label">Comps</span>
-                        </div>
-                        <div class="stat-item" style="background: rgba(244,67,54,0.1);">
-                            <span class="stat-value" id="qs-stat-swaps" style="color:#f44336;">0</span>
-                            <span class="stat-label">Swaps</span>
+                        style="display:none; border-left: 1px solid #555; padding-left: 10px; align-items:center; gap:8px;">
+                        <div class="stat-item"
+                            style="background: rgba(244,67,54,0.1); padding: 5px 10px; min-width: 80px;">
+                            <span class="stat-value" id="qs-stat-comps"
+                                style="color:#f44336; font-size: 1.1rem;">0</span>
+                            <span class="stat-label" style="font-size: 0.65rem;">QS Comps</span>
                         </div>
                     </div>
                 </div>
@@ -693,6 +760,122 @@
 
             <!-- General Educational Content -->
             <h2 style="padding: 20px 20px 0 20px;">Educational Content & Overviews</h2>
+
+            <!-- New Counting Sort Overview -->
+            <div class="edu-section">
+                <button class="collapsible active-collapse"><span style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:12px; height:12px; background:var(--color-count); border-radius:2px;"></div>
+                        Counting Sort — Overview
+                    </span></button>
+                <div class="content" style="max-height: 1000px;">
+                    <div class="content-inner" style="line-height: 1.6;">
+                        <p
+                            style="margin-bottom: 5px; color: var(--accent-color); font-weight: 700; letter-spacing: 0.5px;">
+                            CORE IDEA</p>
+                        <p style="margin-bottom: 20px;">Avoid comparisons by treating each value as a memory address
+                            (index). Use a frequency table (Count Array) to map numbers directly to their final sorted
+                            destination in linear time.</p>
+
+                        <p
+                            style="margin-bottom: 5px; color: var(--accent-color); font-weight: 700; letter-spacing: 0.5px;">
+                            HOW IT WORKS (STEP BY STEP)</p>
+                        <ol style="margin-bottom: 20px; margin-left: 20px;">
+                            <li>Find the <strong>Maximum Value (k)</strong> in the input array to define the range.</li>
+                            <li>Create a <strong>Count Array</strong> of size k+1 and increment index
+                                <code>Count[value]</code> for every element found.
+                            </li>
+                            <li>Transform the Count Array into <strong>Prefix Sums</strong> (accumulate values) to find
+                                the exact ending position for each number.</li>
+                            <li>Iterate <strong>backward</strong> through the original array and place each element into
+                                the Output Array according to its index in the Prefix Count.</li>
+                        </ol>
+
+                        <p
+                            style="margin-bottom: 5px; color: var(--accent-color); font-weight: 700; letter-spacing: 0.5px;">
+                            COMPLEXITY</p>
+                        <p style="margin-bottom: 20px; font-family: var(--font-mono); font-size: 0.9rem;">
+                            Worst / Average: <span style="color:var(--accent-color)">O(n + k)</span> | Space: <span
+                                style="color:var(--accent-color)">O(n + k)</span> | Stable: Yes
+                        </p>
+
+                        <p
+                            style="margin-bottom: 5px; color: var(--accent-color); font-weight: 700; letter-spacing: 0.5px;">
+                            WHEN TO USE</p>
+                        <p>Best for sorting <strong>non-negative integers</strong> when the range of values (k) is not
+                            significantly larger than the number of elements (n). Extremely efficient for sorting
+                            grades, ages, or small IDs.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Radix Sort Overview -->
+            <div class="edu-section">
+                <button class="collapsible active-collapse"><span style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:12px; height:12px; background:var(--color-radix); border-radius:3px;"></div>
+                        Radix Sort — Overview
+                    </span></button>
+                <div class="content" style="max-height: 1000px;">
+                    <div class="content-inner" style="line-height: 1.6;">
+                        <!-- Core Idea -->
+                        <p
+                            style="margin-bottom: 5px; color: var(--color-radix); font-weight: 700; letter-spacing: 0.5px;">
+                            CORE IDEA</p>
+                        <p style="margin-bottom: 20px;">Sort multi-digit numbers by processing individual digits. By
+                            applying a stable sub-sort (such as Counting Sort) to each digit position, the array becomes
+                            fully sorted without comparing entire numbers directly.</p>
+
+                        <!-- How It Works -->
+                        <p
+                            style="margin-bottom: 5px; color: var(--color-radix); font-weight: 700; letter-spacing: 0.5px;">
+                            HOW IT WORKS</p>
+                        <ol style="margin-bottom: 10px; margin-left: 20px;">
+                            <li>Find the maximum value to determine the number of digits (d).</li>
+                            <li>Start with the least significant digit (LSD).</li>
+                            <li>Perform a stable Counting Sort on that digit using buckets based on the chosen base
+                                (e.g., base-10 &rarr; 0&ndash;9).</li>
+                            <li>Move to the next digit (tens, hundreds, etc.).</li>
+                            <li>Repeat until the most significant digit is processed.</li>
+                        </ol>
+                        <p style="margin-bottom: 20px; font-style: italic; font-size: 0.9rem; color: var(--text-dim);">
+                            Stability is essential to preserve ordering from previous passes.</p>
+
+                        <!-- Complexity -->
+                        <p
+                            style="margin-bottom: 5px; color: var(--color-radix); font-weight: 700; letter-spacing: 0.5px;">
+                            COMPLEXITY</p>
+                        <ul
+                            style="margin-bottom: 10px; list-style: none; font-family: var(--font-mono); font-size: 0.9rem;">
+                            <li>Time: <span style="color:var(--color-radix)">O(d(n + k))</span></li>
+                            <li>Space: <span style="color:var(--color-radix)">O(n + k)</span></li>
+                            <li>Stable: Yes</li>
+                        </ul>
+                        <div
+                            style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-dim); background: rgba(255,152,0,0.05); padding: 8px; border-radius: 4px;">
+                            <strong>Where:</strong> d = number of digits, k = base (e.g., 10), not the full value range
+                        </div>
+
+                        <!-- When to Use -->
+                        <p
+                            style="margin-bottom: 5px; color: var(--color-radix); font-weight: 700; letter-spacing: 0.5px;">
+                            WHEN TO USE</p>
+                        <ul style="margin-bottom: 20px; margin-left: 20px;">
+                            <li>Efficient for large datasets of integers or fixed-length strings.</li>
+                            <li>Best when: <strong>n is large</strong> and <strong>d is small</strong>.</li>
+                            <li>Preferred over Counting Sort when the value range is huge.</li>
+                        </ul>
+
+                        <!-- Notes -->
+                        <p
+                            style="margin-bottom: 5px; color: var(--color-radix); font-weight: 700; letter-spacing: 0.5px;">
+                            NOTES</p>
+                        <ul style="margin-bottom: 5px; margin-left: 20px; font-size: 0.95rem;">
+                            <li>Works best with non-negative integers.</li>
+                            <li>Can be adapted for negatives and floats with preprocessing.</li>
+                            <li>Alternative variant: MSD Radix Sort (left &rarr; right).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
 
             <div class="edu-section">
                 <button class="collapsible">Algorithm Overview: Counting & Radix Sort</button>
@@ -1901,6 +2084,11 @@
             });
             qsCanvas.appendChild(g);
         }
+
+        // --- Responsive Re-render ---
+        window.addEventListener('resize', () => {
+            if (stateHistory.length > 0) renderStep();
+        });
 
         // --- Init ---
         window.onload = () => {
